@@ -57,7 +57,7 @@ And these commands:
 | `position` | Sets the board position and optionally applies moves |
 | `go` | Searches for the best move |
 | `go perft <depth>` | Runs perft divide for move-generation testing |
-| `stop` | Stops the current searc. |
+| `stop` | Stops the current search |
 | `quit` | Exits the engine |
 
 ## Architecture
