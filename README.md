@@ -1,12 +1,12 @@
 <p align="center">
-<img src="images/gift_logo.png" width="250">
+<img src="images/heron_logo.png" width="250">
 </p>
 
-<h1 align="center">Gift Chess Engine</h1>
+<h1 align="center">Heron (Heuristic chess Engine written in Rust)</h1>
 
 Gift is a chess engine, written in Rust.
 
-## Installing Gift
+## Installing Heron
 > [!NOTE]
 > Gift is a chess engine not a program. It should be used with UCI-compatible GUI.
 
