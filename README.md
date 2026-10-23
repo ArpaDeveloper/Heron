@@ -4,7 +4,7 @@
 
 <h1 align="center">Heron (Heuristic chess Engine written in Rust)</h1>
 
-Heron is a chess engine, written in Rust.
+Heron is a modular chess engine developed in Rust as part of my thesis. It employs a handcrafted, heuristic-based evaluation function and incorporates several search techniques, including Negamax with alpha–beta pruning, iterative deepening, move ordering, and quiescence search, alongside various other optimizations.
 
 ## Installing Heron
 > [!NOTE]
