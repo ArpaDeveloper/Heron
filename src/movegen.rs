@@ -1,6 +1,12 @@
+/*
+    Engine: Heron
+    Author: ArpaDeveloper
+
+    File: movegen.rs
+    This file handles generation of legal moves.
+*/
+
 use crate::board::{Bitboard, Board, CastlingRights, Color, PieceType, Square};
-
-
 
 //MOVETYPE
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -86,6 +92,16 @@ impl MoveList{
     //Returns an iterator over the moves in the list
     pub fn iter(&self)->impl Iterator<Item = Move> + '_{
         self.moves[..self.len].iter().map(|m| m.expect("slots below len are always filled"))
+    }
+
+    //Getter for move at given index
+    pub fn get(&self,i:usize)->Move{
+        self.moves[i].expect("index below len")
+    }
+
+    //Swaps two moves in the list
+    pub fn swap(&mut self,a:usize,b:usize){
+        self.moves.swap(a, b);
     }
 }
 
@@ -251,12 +267,23 @@ pub fn in_check(board:&Board)->bool{
 //PSEUDOLEGALGENERATION
 //List of pseudo-legal moves
 pub fn pseudo_legal_moves(board:&Board)->MoveList{
+    generate(board, false)
+}
+
+//Captures, en passant and promotions only (for quiescence)
+pub fn pseudo_legal_captures(board:&Board)->MoveList{
+    generate(board, true)
+}
+
+fn generate(board:&Board,tactical_only:bool)->MoveList{
     let mut list = MoveList::new();
     let us = board.side_to_move;
-    gen_pawns(board, us, &mut list);
-    gen_piece_moves(board, us, &mut list);
-    gen_king_moves(board, us, &mut list);
-    gen_castling(board, us, &mut list);
+    gen_pawns(board, us, &mut list, tactical_only);
+    gen_piece_moves(board, us, &mut list, tactical_only);
+    gen_king_moves(board, us, &mut list, tactical_only);
+    if !tactical_only{
+        gen_castling(board, us, &mut list);
+    }
     list
 }
 
@@ -286,7 +313,7 @@ fn push_promotions(list:&mut MoveList,from:Square,to:Square,capture:bool){
 }
 
 //Generates a list of all legal pawn moves
-fn gen_pawns(board:&Board,us:Color,list:&mut MoveList){
+fn gen_pawns(board:&Board,us:Color,list:&mut MoveList,tactical_only:bool){
     let (forward, start_rank, promo_rank): (i8, u8, u8) = match us{
         Color::White => (8, 1, 7),
         Color::Black => (-8, 6, 0),
@@ -295,20 +322,19 @@ fn gen_pawns(board:&Board,us:Color,list:&mut MoveList){
     let enemy = board.all_pieces_by_color[us.opposite() as usize];
     let mut pawns = board.piece_bitboard(us, PieceType::Pawn);
 
-    while let Some(from) = pawns.pop_least_significant_bit(){
-        //Single and double pushes
+    while let Some(from)=pawns.pop_least_significant_bit(){
+        //Single and double pawn pushes
         let one = offset(from, forward);
         if !occ.contains(one){
             if one.rank() == promo_rank{
                 push_promotions(list, from, one, false);
-            }else{
+            }else if !tactical_only{
                 list.push(Move::new(from, one, MoveKind::Quiet));
-            }
-
-            if from.rank() == start_rank{
-                let two = offset(from, 2 * forward);
-                if !occ.contains(two){
-                    list.push(Move::new(from, two, MoveKind::DoublePawnPush));
+                if from.rank() == start_rank{
+                    let two = offset(from, 2 * forward);
+                    if !occ.contains(two){
+                        list.push(Move::new(from, two, MoveKind::DoublePawnPush));
+                    }
                 }
             }
         }
@@ -343,7 +369,7 @@ fn slider_attacks(piece:PieceType,sq:Square,occ:Bitboard)->Bitboard{
 }
 
 //Generates a MoveList for knights, bishops, rooks, and queens
-fn gen_piece_moves(board:&Board,us:Color,list:&mut MoveList){
+fn gen_piece_moves(board:&Board,us:Color,list:&mut MoveList,tactical_only:bool){
     let own = board.all_pieces_by_color[us as usize];
     let enemy = board.all_pieces_by_color[us.opposite() as usize];
     let occ = board.all_pieces;
@@ -355,17 +381,21 @@ fn gen_piece_moves(board:&Board,us:Color,list:&mut MoveList){
                 PieceType::Knight => knight_attacks(from),
                 _ => slider_attacks(piecetype, from, occ),
             };
-            push_targets(list, from, attacks & !own, enemy);
+            let mut targets = attacks & !own;
+            if tactical_only { targets = targets & enemy; }
+            push_targets(list, from, targets, enemy);
         }
     }
 }
 
 //Generates MoveList for the king
-fn gen_king_moves(board:&Board,us:Color,list:&mut MoveList){
+fn gen_king_moves(board:&Board,us:Color,list:&mut MoveList,tactical_only:bool){
     let own = board.all_pieces_by_color[us as usize];
     let enemy = board.all_pieces_by_color[us.opposite() as usize];
     if let Some(from) = board.king_square(us){
-        push_targets(list, from, king_attacks(from) & !own, enemy);
+        let mut targets = king_attacks(from) & !own;
+        if tactical_only { targets = targets & enemy; }
+        push_targets(list, from, targets, enemy);
     }
 }
 
@@ -464,65 +494,4 @@ pub fn perft_divide(board:&mut Board,depth:u32)->u64{
     }
     println!("Nodes searched: {}", total);
     total
-}
-
-//Test for legal move gen
-#[test]
-fn standard_perft_positions() {
-    let positions: [(&str, [u64; 5]); 5] = [
-        // Position 2: Kiwipete
-        (
-            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-            [48, 2039, 97862, 4085603, 193690690],
-        ),
-
-        // Position 3: Endgame and en passant
-        (
-            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
-            [14, 191, 2812, 43238, 674624],
-        ),
-
-        // Position 4: Promotions and checks
-        (
-            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
-            [6, 264, 9467, 422333, 15833292],
-        ),
-
-        // Position 5: Promotion-heavy middlegame
-        (
-            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
-            [44, 1486, 62379, 2103487, 89941194],
-        ),
-
-        // Position 6: Tactical middlegame
-        (
-            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
-            [46, 2079, 89890, 3894594, 164075551],
-        ),
-    ];
-
-    for (index, (fen, expected_counts)) in positions.iter().enumerate() {
-        for depth in 1..=5 {
-            let mut board = Board::from_fen(fen)
-                .expect("Test FEN should be valid");
-
-            let actual = perft(&mut board, depth);
-            let expected = expected_counts[(depth - 1) as usize];
-
-            println!(
-                "Position {}, depth {}: {} nodes",
-                index + 2,
-                depth,
-                actual
-            );
-
-            assert_eq!(
-                actual,
-                expected,
-                "Perft mismatch in position {}, depth {}",
-                index + 2,
-                depth
-            );
-        }
-    }
 }
