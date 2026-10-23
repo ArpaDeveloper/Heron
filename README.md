@@ -1,5 +1,5 @@
 <p align="center">
-<img src="images/heron_logo.png" width="250">
+<img src="images/heron.logo.png" width="250">
 </p>
 
 <h1 align="center">Heron (Heuristic chess Engine written in Rust)</h1>
