@@ -1,3 +1,11 @@
+/*
+    Engine: Heron
+    Author: ArpaDeveloper
+
+    File: fen.rs
+    This file contains FEN parsing and handling
+*/
+
 use crate::board::{Board, CastlingRights, Color, PieceType, Square};
 
 //Starting position as FEN
@@ -81,7 +89,7 @@ impl Board {
         }
 
         for (i, rank_str) in ranks.iter().enumerate(){
-            let rank = 7-i as u8; //first rank in the string is rank 8
+            let rank = 7-i as u8;
             let mut file:u8 = 0;
 
             for c in rank_str.chars() {
