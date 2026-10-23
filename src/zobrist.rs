@@ -1,3 +1,10 @@
+/*
+    Engine: Heron
+    Author: ArpaDeveloper
+
+    File: zobrist.rs
+    This file contains struct and methods for Zobrist Hashing
+*/
 
 //ZOBRIST HASH
 pub struct Zobrist{
@@ -62,8 +69,6 @@ impl Zobrist{
         Zobrist{pieces,side_to_move,castling,en_passant_file}
     }
 }
-
-
 
 //Built at compile time, so there is no setup code at startup
 pub static ZOBRIST: Zobrist=Zobrist::new();
