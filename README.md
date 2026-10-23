@@ -75,7 +75,7 @@ Heron was designed to be modular and easy to modify, with each file handling a s
 
 [search.rs](src/search.rs) → Search algorithms
 
-[uci.rs](src/uci.rs) → UCI protocol and command handling
+[uci.rs](src/uci.rs) → UCI protocol, command, time mangement handling
 
 [zobrist.rs](src/zobrist.rs) → Zobrist hashing for position identification
 ## License
