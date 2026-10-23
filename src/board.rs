@@ -1,3 +1,11 @@
+/*
+    Engine: Heron
+    Author: ArpaDeveloper
+
+    File: Board.rs
+    This file handles board representation and board management
+*/
+
 use crate::zobrist::ZOBRIST;
 use crate::movegen::{Move, MoveKind};
 use std::ops::{BitAnd, BitOr, BitOrAssign, Not};
@@ -14,6 +22,8 @@ pub struct Board{
     pub halfmove_clock:u32, //For 50-move rule
     pub fullmove_number:u32,
     pub hash:u64, //Zobrist hash of the position
+    pub history: Vec<u64>, //hashes of earlier positions in the game
+    pub mailbox: [Option<(Color, PieceType)>; 64], //what stands on each square
 }
 
 //UNDO: state that make_move changes and that can't be rebuilt from the move alone
@@ -25,6 +35,13 @@ pub struct Undo{
     pub halfmove_clock: u32,
     pub fullmove_number: u32,
     pub hash: u64,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct NullUndo{
+    en_passant: Option<Square>,
+    halfmove_clock: u32,
+    hash: u64,
 }
 
 impl Board{
@@ -40,6 +57,8 @@ impl Board{
             halfmove_clock:0,
             fullmove_number:1,
             hash:0,
+            history:Vec::new(),
+            mailbox:[None; 64],
         }
     }
 
@@ -54,6 +73,7 @@ impl Board{
         self.all_pieces_by_color[color as usize].set(sq);
         self.all_pieces.set(sq);
         self.hash ^= ZOBRIST.pieces[color as usize][piecetype as usize][sq.0 as usize];
+        self.mailbox[sq.0 as usize] = Some((color, piecetype));
     }
 
     //Remove piece from a Square
@@ -62,24 +82,12 @@ impl Board{
         self.all_pieces_by_color[color as usize].clear(sq);
         self.all_pieces.clear(sq);
         self.hash ^= ZOBRIST.pieces[color as usize][piecetype as usize][sq.0 as usize];
+        self.mailbox[sq.0 as usize] = None;
     }
 
     //Check whats on specific Square
     pub fn piece_at(&self, sq:Square)->Option<(Color,PieceType)>{
-        if !self.all_pieces.contains(sq){
-            return None;
-        }
-        for color in [Color::White, Color::Black]{
-            if !self.all_pieces_by_color[color as usize].contains(sq){
-                continue;
-            }
-            for piecetype in PieceType::ALL{
-                if self.piece_bitboard(color, piecetype).contains(sq){
-                    return Some((color, piecetype))
-                }
-            }
-        }
-        None
+        self.mailbox[sq.0 as usize]
     }
 
     //Computes the Zobrist hash from scratch
@@ -131,6 +139,8 @@ impl Board{
             fullmove_number: self.fullmove_number,
             hash: self.hash,
         };
+
+        self.history.push(self.hash);
 
         //En passant
         if let Some(ep) = self.en_passant{
@@ -210,8 +220,48 @@ impl Board{
         self.halfmove_clock = undo.halfmove_clock;
         self.fullmove_number = undo.fullmove_number;
         self.hash = undo.hash;
+        self.history.pop();
     }
 
+    //Makes a null move
+    pub fn make_null_move(&mut self)->NullUndo{
+        self.history.push(self.hash);
+        let undo = NullUndo { en_passant: self.en_passant, halfmove_clock: self.halfmove_clock, hash: self.hash };
+        if let Some(ep) = self.en_passant{
+            self.hash ^= ZOBRIST.en_passant_file[ep.file() as usize];
+        }
+        self.en_passant = None;
+        self.halfmove_clock += 1;
+        self.side_to_move = self.side_to_move.opposite();
+        self.hash ^= ZOBRIST.side_to_move;
+        undo
+    }
+
+    //Unmakes a null move
+    pub fn unmake_null_move(&mut self,undo:NullUndo){
+        self.side_to_move = self.side_to_move.opposite();
+        self.en_passant = undo.en_passant;
+        self.halfmove_clock = undo.halfmove_clock;
+        self.hash = undo.hash;
+        self.history.pop();
+    }
+
+    //Checks for repetition
+    pub fn is_repetition(&self,ply:i32)->bool{
+        let len = self.history.len();
+        let max_back = (self.halfmove_clock as usize).min(len);
+        let mut count = 0;
+        let mut back = 2;
+        while back <= max_back{
+            if self.history[len - back] == self.hash{
+                if back as i32 <= ply { return true; }
+                count += 1;
+                if count >= 2 { return true; }
+            }
+            back += 2;
+        }
+        false
+    }
 }
 
 //BITBOARD
@@ -284,6 +334,33 @@ impl Bitboard{
         let sq=self.least_significant_bit()?;
         self.0 &= self.0-1;
         Some(sq)
+    }
+
+     //Returns a bitboard containing every square on the given file
+    pub const fn file_mask(file:u8)->Bitboard{
+        Bitboard(Self::FILE_A.0 << file)
+    }
+
+    //Returns a bitboard of the files immediately adjacent to the given file
+    pub const fn adjacent_files(file:u8)->Bitboard{
+        let f = Self::file_mask(file);
+        Bitboard(f.west().0 | f.east().0) 
+    }
+
+    //Returns a bitboard of all ranks strictly ahead of the given rank from the color's perspective
+    pub const fn front_ranks(color:Color,rank:u8)->Bitboard{
+        match color{
+            Color::White => if rank >= 7 { Bitboard(0) } else { Bitboard(!0u64 << (8 * (rank + 1))) },
+            Color::Black => Bitboard((1u64 << (8 * rank)) - 1),
+        }
+    }
+
+    //Returns a bitboard containing the rank immediately behind the given rank from the color's perspective
+    pub const fn rank_behind(color:Color,rank:u8)->Bitboard{
+        match color{
+            Color::White => if rank == 0 { Bitboard(0) } else { Bitboard(0xFFu64 << (8 * (rank - 1))) },
+            Color::Black => if rank >= 7 { Bitboard(0) } else { Bitboard(0xFFu64 << (8 * (rank + 1))) },
+        }
     }
 }
 
