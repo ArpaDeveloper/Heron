@@ -71,11 +71,11 @@ Heron was designed to be modular and easy to modify, with each file handling a s
 
 [main.rs](src/main.rs) → Program entry point
 
-[movegen.rs](src/movegen.rs) → Legal move generation
+[movegen.rs](src/movegen.rs) → Legal move generation and perft
 
 [search.rs](src/search.rs) → Search algorithms
 
-[test.rs](src/test.rs) → Contains 69 tests for the engine
+[test.rs](src/test.rs) → Engine tests
 
 [transpositiontable.rs](src/transpositiontable.rs) → Transposition tables for storing searched results
 
