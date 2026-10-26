@@ -69,11 +69,13 @@ Heron was designed to be modular and easy to modify, with each file handling a s
 
 [fen.rs](src/fen.rs) → FEN parsing and handling
 
-[movegen.rs](src/movegen.rs) → Legal move generation
-
 [main.rs](src/main.rs) → Program entry point
 
+[movegen.rs](src/movegen.rs) → Legal move generation
+
 [search.rs](src/search.rs) → Search algorithms
+
+[test.rs](src/test.rs) → Contains 69 tests for the engine
 
 [transpositiontable.rs](src/transpositiontable.rs) → Transposition tables for storing searched results
 
@@ -81,7 +83,7 @@ Heron was designed to be modular and easy to modify, with each file handling a s
 
 [zobrist.rs](src/zobrist.rs) → Zobrist hashing for position identification
 ## License
-
+This project is licensed under the [MIT License](LICENSE).
 ## Acknowledgements
 - [Chess Programming Wiki](https://chessprogramming.org/Main_Page)
 
