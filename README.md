@@ -63,6 +63,12 @@ And these commands:
 ## Architecture
 Heron was designed to be modular and easy to modify, with each file handling a specific part of the engine.
 
+### UML
+<p align="center">
+<img src="images/heron_uml_1.0.0.png">
+</p>
+
+### Files
 [board.rs](src/board.rs) → Board representation and position management
 
 [evaluation.rs](src/evaluation.rs) → Position evaluation
