@@ -67,6 +67,7 @@ Heron was designed to be modular and easy to modify, with each file handling a s
 <p align="center">
 <img src="images/heron_uml_1.0.0.png">
 </p>
+A UML diagram illustrating the modular structure of Heron
 
 ### Files
 [board.rs](src/board.rs) → Board representation and position management
