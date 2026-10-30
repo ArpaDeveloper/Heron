@@ -803,8 +803,6 @@ fn tt_store_and_probe() {
     assert_eq!(e.best, Some(m));
 }
 
-
-
 #[test]
 fn tt_keeps_old_move_and_eval_when_updated_without_them() {
     let mut t = TranspositionTable::new(1);
@@ -828,6 +826,15 @@ fn tt_clear_empties_the_table() {
     assert!(t.probe(key).is_none());
 }
 
+#[test]
+fn tt_rejects_a_different_position_in_the_same_slot() {
+    let mut t = TranspositionTable::new(1);
+    let stored = (0x1111u64 << 32) | 5;
+    let other = (0x2222u64 << 32) | 5;
+    t.store(stored, 4, 50, Bound::Exact, None);
+    assert!(t.probe(stored).is_some());
+    assert!(t.probe(other).is_none(), "a colliding key must not return another position's entry");
+}
 
 #[test]
 fn search_gives_same_best_move_with_a_tiny_and_a_large_table() {
